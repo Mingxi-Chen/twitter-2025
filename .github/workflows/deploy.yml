@@ -10,6 +10,7 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+
   deploy:
     runs-on: ubuntu-latest
     defaults:
@@ -39,6 +40,9 @@ jobs:
           VITE_FIREBASE_MESSAGING_SENDER_ID: ${{ secrets.VITE_FIREBASE_MESSAGING_SENDER_ID }}
           VITE_FIREBASE_APP_ID: ${{ secrets.VITE_FIREBASE_APP_ID }}
         run: npm run build
+
+      - name: Debug build output
+        run: ls -al dist && echo "dist/ is ready"
 
       - name: Deploy to Server
         uses: easingthemes/ssh-deploy@v5.0.3
