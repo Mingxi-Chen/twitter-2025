@@ -1,4 +1,5 @@
-import { FormEvent, useEffect, useState } from 'react'
+import type { FormEvent } from 'react'
+import { useEffect, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { useAuth } from '../auth/AuthContext'
 import { db } from '../firebase'
@@ -21,13 +22,17 @@ export default function EditPostPage() {
         navigate('/')
         return
       }
-      const data = snap.data() as any
+      const data = snap.data() as { uid?: string; title?: string; content?: string }
+      if (!user || data.uid !== user.uid) {
+        navigate('/')
+        return
+      }
       setTitle(data.title ?? '')
       setContent(data.content ?? '')
       setLoading(false)
     }
     load()
-  }, [id, navigate])
+  }, [id, navigate, user])
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault()

@@ -14,7 +14,7 @@ export type Post = {
 }
 
 export default function HomePage() {
-  const { user } = useAuth()
+  const { user, signOutUser } = useAuth()
   const [posts, setPosts] = useState<Post[]>([])
 
   useEffect(() => {
@@ -43,6 +43,7 @@ export default function HomePage() {
           {user ? (
             <>
               <Link to="/new" className="px-3 py-1 bg-blue-600 text-white rounded">New Post</Link>
+              <button onClick={signOutUser} className="px-3 py-1 bg-gray-100 rounded">Sign Out</button>
             </>
           ) : (
             <Link to="/login" className="px-3 py-1 bg-gray-200 rounded">Login</Link>
@@ -54,7 +55,9 @@ export default function HomePage() {
         {posts.map(p => (
           <article key={p.id} className="border rounded p-3 bg-white">
             <h2 className="text-lg font-semibold">{p.title}</h2>
-            <div className="text-sm text-gray-500">{p.author} | {p.createdAt.toDate().toLocaleString()}</div>
+            <div className="text-sm text-gray-500">
+              {p.author} | {((p.createdAt as any)?.toDate?.()?.toLocaleString?.() ?? '')}
+            </div>
             <p className="mt-2 text-gray-700 whitespace-pre-line">{p.content}</p>
             {user?.uid === p.uid && (
               <div className="mt-3 flex gap-2">
