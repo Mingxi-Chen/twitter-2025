@@ -1,24 +1,26 @@
 name: auto deploy to server
 
 on:
+  workflow_dispatch:
   push:
     branches: [ main ]
-  workflow_dispatch:
 
 concurrency:
   group: deploy-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
+
   deploy:
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: .  # 如果你的仓库根就是 social-app，则改为 "."
 
     steps:
-      # 1️⃣ 拉取代码
-      - name: Checkout repository
+      - name: Checkout
         uses: actions/checkout@v4
 
-      # 2️⃣ 设置 Node 环境
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
@@ -26,12 +28,10 @@ jobs:
           cache: npm
           cache-dependency-path: package-lock.json
 
-      # 3️⃣ 安装依赖
       - name: Install dependencies
         run: npm ci
 
-      # 4️⃣ 构建（生成 dist/）
-      - name: Build project
+      - name: Build
         env:
           VITE_FIREBASE_API_KEY: ${{ secrets.VITE_FIREBASE_API_KEY }}
           VITE_FIREBASE_AUTH_DOMAIN: ${{ secrets.VITE_FIREBASE_AUTH_DOMAIN }}
@@ -41,46 +41,18 @@ jobs:
           VITE_FIREBASE_APP_ID: ${{ secrets.VITE_FIREBASE_APP_ID }}
         run: npm run build
 
-      # 5️⃣ 调试输出：确认 dist 生成
-      - name: Verify build output
-        run: |
-          echo "== 当前目录 =="
-          pwd
-          echo "== dist 内容 =="
-          ls -al dist || echo "dist not found"
+      - name: Debug build output
+        run: ls -al dist && echo "dist/ is ready"
 
-      # 6️⃣ 确保服务器目标路径存在
-      - name: Ensure target directory on server
-        uses: appleboy/ssh-action@v1.0.3
-        with:
-          host: ${{ secrets.TEST1_HOST }}
-          username: ${{ secrets.TEST1_USER }}
-          key: ${{ secrets.TEST1_KEY }}
-          port: ${{ secrets.TEST1_PORT }}
-          script: |
+      - name: Deploy to Server
+        uses: easingthemes/ssh-deploy@v5.0.3
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.TEST1_KEY }}
+          REMOTE_HOST: ${{ secrets.TEST1_HOST }}
+          REMOTE_PORT: ${{ secrets.TEST1_PORT }}  # 例如 22
+          REMOTE_USER: ${{ secrets.TEST1_USER }}
+          ARGS: "-avzr --delete"
+          SOURCE: "dist/"               # 如果仓库根就是 social-app，则改为 "dist/"
+          TARGET: "/home/track_a/mingxi/twitter-2025/dist"
+          SCRIPT_BEFORE: |
             mkdir -p /home/track_a/mingxi/twitter-2025/dist
-            echo "✅ target directory ready"
-
-      # 7️⃣ 上传 dist 到服务器
-      - name: Upload dist via SCP
-        uses: appleboy/scp-action@v0.1.7
-        with:
-          host: ${{ secrets.TEST1_HOST }}
-          username: ${{ secrets.TEST1_USER }}
-          key: ${{ secrets.TEST1_KEY }}
-          port: ${{ secrets.TEST1_PORT }}
-          source: "dist/*"
-          target: "/home/track_a/mingxi/twitter-2025/dist"
-          overwrite: true
-
-      # 8️⃣ 可选：构建完成后在服务器重启 Nginx（需要 sudo 权限）
-      - name: Reload Nginx (optional)
-        uses: appleboy/ssh-action@v1.0.3
-        with:
-          host: ${{ secrets.TEST1_HOST }}
-          username: ${{ secrets.TEST1_USER }}
-          key: ${{ secrets.TEST1_KEY }}
-          port: ${{ secrets.TEST1_PORT }}
-          script: |
-            sudo nginx -t && sudo nginx -s reload
-            echo "✅ nginx reloaded"
